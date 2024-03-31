@@ -1,26 +1,13 @@
-/**
- * Unit tests for the action's main functionality, src/main.ts
- *
- * These should be run as if the action was called from a workflow.
- * Specifically, the inputs listed in `action.yml` should be set as environment
- * variables following the pattern `INPUT_<INPUT_NAME>`.
- */
-
 import * as core from '@actions/core'
 import * as main from '../src/main'
 
 // Mock the action's main function
 const runMock = jest.spyOn(main, 'run')
 
-// Other utilities
-const timeRegex = /^\d{2}:\d{2}:\d{2}/
-
-// Mock the GitHub Actions core library
 let debugMock: jest.SpiedFunction<typeof core.debug>
 let errorMock: jest.SpiedFunction<typeof core.error>
 let getInputMock: jest.SpiedFunction<typeof core.getInput>
 let setFailedMock: jest.SpiedFunction<typeof core.setFailed>
-let setOutputMock: jest.SpiedFunction<typeof core.setOutput>
 
 describe('action', () => {
   beforeEach(() => {
@@ -30,15 +17,13 @@ describe('action', () => {
     errorMock = jest.spyOn(core, 'error').mockImplementation()
     getInputMock = jest.spyOn(core, 'getInput').mockImplementation()
     setFailedMock = jest.spyOn(core, 'setFailed').mockImplementation()
-    setOutputMock = jest.spyOn(core, 'setOutput').mockImplementation()
   })
 
-  it('sets the time output', async () => {
-    // Set the action's inputs as return values from core.getInput()
+  it('does not set a failed status if the open api file is a valid open api json file', async () => {
     getInputMock.mockImplementation(name => {
       switch (name) {
-        case 'milliseconds':
-          return '500'
+        case 'filepath':
+          return './__tests__/data/valid-open-api-file.json'
         default:
           return ''
       }
@@ -46,31 +31,20 @@ describe('action', () => {
 
     await main.run()
     expect(runMock).toHaveReturned()
-
-    // Verify that all of the core library functions were called correctly
-    expect(debugMock).toHaveBeenNthCalledWith(1, 'Waiting 500 milliseconds ...')
     expect(debugMock).toHaveBeenNthCalledWith(
-      2,
-      expect.stringMatching(timeRegex)
-    )
-    expect(debugMock).toHaveBeenNthCalledWith(
-      3,
-      expect.stringMatching(timeRegex)
-    )
-    expect(setOutputMock).toHaveBeenNthCalledWith(
       1,
-      'time',
-      expect.stringMatching(timeRegex)
+      'Validating ./__tests__/data/valid-open-api-file.json ...'
     )
+    // expect(debugMock).toHaveBeenNthCalledWith(1, 'API name: Webhook Example, Version: 1.0.0')
+    expect(setFailedMock).not.toHaveBeenCalled()
     expect(errorMock).not.toHaveBeenCalled()
   })
 
-  it('sets a failed status', async () => {
-    // Set the action's inputs as return values from core.getInput()
+  it('does not set a failed status if the open api file is a valid open api yaml file', async () => {
     getInputMock.mockImplementation(name => {
       switch (name) {
-        case 'milliseconds':
-          return 'this is not a number'
+        case 'filepath':
+          return './__tests__/data/valid-open-api-file.yml'
         default:
           return ''
       }
@@ -78,12 +52,69 @@ describe('action', () => {
 
     await main.run()
     expect(runMock).toHaveReturned()
-
-    // Verify that all of the core library functions were called correctly
-    expect(setFailedMock).toHaveBeenNthCalledWith(
+    expect(debugMock).toHaveBeenNthCalledWith(
       1,
-      'milliseconds not a number'
+      'Validating ./__tests__/data/valid-open-api-file.yml ...'
     )
+    // expect(debugMock).toHaveBeenNthCalledWith(1, 'API name: Webhook Example, Version: 1.0.0')
+    expect(setFailedMock).not.toHaveBeenCalled()
+    expect(errorMock).not.toHaveBeenCalled()
+  })
+
+  it('sets a failed status if the open api file is an invalid open api json file', async () => {
+    getInputMock.mockImplementation(name => {
+      switch (name) {
+        case 'filepath':
+          return './__tests__/data/invalid-open-api-file.json'
+        default:
+          return ''
+      }
+    })
+
+    await main.run()
+    expect(runMock).toHaveReturned()
+    expect(debugMock).toHaveBeenNthCalledWith(
+      1,
+      'Validating ./__tests__/data/invalid-open-api-file.json ...'
+    )
+    expect(setFailedMock).toHaveBeenCalled()
+    expect(errorMock).not.toHaveBeenCalled()
+  })
+
+  it('sets a failed status if the open api file is an invalid open api yaml file', async () => {
+    getInputMock.mockImplementation(name => {
+      switch (name) {
+        case 'filepath':
+          return './__tests__/data/invalid-open-api-file.yml'
+        default:
+          return ''
+      }
+    })
+
+    await main.run()
+    expect(runMock).toHaveReturned()
+    expect(debugMock).toHaveBeenNthCalledWith(
+      1,
+      'Validating ./__tests__/data/invalid-open-api-file.yml ...'
+    )
+    // expect(debugMock).toHaveBeenNthCalledWith(1, 'API name: Webhook Example, Version: 1.0.0')
+    expect(setFailedMock).toHaveBeenCalled()
+    expect(errorMock).not.toHaveBeenCalled()
+  })
+
+  it('sets a failed status if the passed file path is invalid', async () => {
+    getInputMock.mockImplementation(name => {
+      switch (name) {
+        case 'filepath':
+          return 'fake_path'
+        default:
+          return ''
+      }
+    })
+
+    await main.run()
+    expect(runMock).toHaveReturned()
+    expect(setFailedMock).toHaveBeenCalled()
     expect(errorMock).not.toHaveBeenCalled()
   })
 })
