@@ -57,4 +57,4 @@ jobs:
         id: test-action
         uses: ./
         with:
-          filepath: './__test__/data_valid-open-api-file.json'
+          filepath: './__tests__/data/valid-open-api-file.json'
